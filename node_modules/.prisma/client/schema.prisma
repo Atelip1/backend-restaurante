@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model auditoria {
+  id               Int       @id @default(autoincrement())
+  tabla_afectada   String?
+  accion           String?
+  usuario_id       Int?
+  fecha            DateTime? @default(now()) @db.Timestamp(6)
+  datos_anteriores Json?
+  datos_nuevos     Json?
+}
+
+model categorias {
+  id        Int         @id @default(autoincrement())
+  nombre    String      @unique
+  productos productos[]
+}
+
+model configuracion {
+  id             Int     @id @default(autoincrement())
+  nombre_negocio String?
+  direccion      String?
+  telefono       String?
+  horario        String?
+  logo           String?
+}
+
+model contacto {
+  id      Int       @id @default(autoincrement())
+  nombre  String
+  correo  String
+  mensaje String
+  fecha   DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model detalle_pedido {
+  id          Int        @id @default(autoincrement())
+  pedido_id   Int?
+  producto_id Int?
+  cantidad    Int
+  subtotal    Decimal?   @db.Decimal(10, 2)
+  pedidos     pedidos?   @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productos   productos? @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model logs_admin {
+  id          Int       @id @default(autoincrement())
+  admin_id    Int?
+  accion      String
+  descripcion String?
+  fecha       DateTime? @default(now()) @db.Timestamp(6)
+  usuarios    usuarios? @relation(fields: [admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model mesas {
+  id         Int        @id @default(autoincrement())
+  numero     Int        @unique
+  capacidad  Int
+  disponible Boolean?   @default(true)
+  reservas   reservas[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pagos {
+  id         Int       @id @default(autoincrement())
+  pedido_id  Int?
+  metodo     String
+  estado     String?   @default("pendiente")
+  fecha      DateTime? @default(now()) @db.Timestamp(6)
+  referencia String?
+  pedidos    pedidos?  @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pedidos {
+  id             Int              @id @default(autoincrement())
+  usuario_id     Int?
+  fecha          DateTime?        @default(now()) @db.Timestamp(6)
+  estado         String?          @default("pendiente")
+  total          Decimal?         @db.Decimal(10, 2)
+  observaciones  String?
+  detalle_pedido detalle_pedido[]
+  pagos          pagos[]
+  usuarios       usuarios?        @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model productos {
+  id             Int              @id @default(autoincrement())
+  nombre         String
+  descripcion    String?
+  precio         Decimal          @db.Decimal(10, 2)
+  imagen         String?
+  categoria_id   Int?
+  disponible     Boolean?         @default(true)
+  fecha_creacion DateTime?        @default(now()) @db.Timestamp(6)
+  detalle_pedido detalle_pedido[]
+  categorias     categorias?      @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reservas {
+  id                Int       @id @default(autoincrement())
+  usuario_id        Int?
+  mesa_id           Int?
+  fecha_reserva     DateTime  @db.Timestamp(6)
+  cantidad_personas Int
+  estado            String?   @default("pendiente")
+  observaciones     String?
+  mesas             mesas?    @relation(fields: [mesa_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios          usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model roles {
+  id       Int        @id @default(autoincrement())
+  nombre   String     @unique
+  usuarios usuarios[]
+}
+
+model usuarios {
+  id             Int          @id @default(autoincrement())
+  nombre         String
+  correo         String       @unique
+  contrase_a     String       @map("contraseña")
+  telefono       String?
+  direccion      String?
+  rol_id         Int?
+  fecha_registro DateTime?    @default(now()) @db.Timestamp(6)
+  logs_admin     logs_admin[]
+  pedidos        pedidos[]
+  reservas       reservas[]
+  roles          roles?       @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
